@@ -1,0 +1,389 @@
+---
+title: "IMA Day 2 Notes"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+
+
+
+## Getting Started
+
+**Load packages required for exercises:**
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(mosaic))
+```
+
+
+
+
+<br>
+<br>
+
+
+
+## Regression Assumptions & Residual Analysis 
+
+### Exercise 1
+
+
+
+
+<br>
+<br>
+
+### Exercise 2
+
+
+```{r}
+suppressPackageStartupMessages(library(mosaic))
+data(Galton)
+ggplot(Galton, aes(y=height, x=father)) + 
+    geom_point() + 
+    geom_smooth(method="lm")
+GaltonMod <- lm(height ~ father, data=Galton)
+summary(GaltonMod)
+```
+
+
+
+```{r}
+#combine the raw responses, model predictions, and model residuals
+
+#a plot of residuals versus the predictions    
+
+#a Q-Q plot of the residuals
+
+```
+
+
+
+
+<br>
+<br>
+<br>
+<br>
+
+
+## Measuring model quality: $R^2$
+
+<br>
+
+
+```{r}
+fulldata <- read.csv("https://www.macalester.edu/~ajohns24/data/IMAdata1.csv")
+
+class(fulldata$county)
+
+# add a variable
+fulldata <- fulldata %>% mutate(beforeL = (as.character(county) < "L"))
+#set the random number seed
+set.seed(2000)
+#load the dplyr package for the sample_n function
+suppressPackageStartupMessages(library(dplyr))
+subdata <- sample_n(fulldata, size=100)
+dim(subdata)
+#take a sample
+
+```
+
+
+```{r}
+ggplot(subdata, aes(x=perrep_2016)) + 
+    geom_histogram(color="white")
+```
+```{r}
+var(subdata$perrep_2016, na.rm=TRUE)
+## [1] 0.02691
+sd(subdata$perrep_2016, na.rm=TRUE)
+## [1] 0.164
+```
+
+<br>
+
+### Exercise 3
+
+
+`mod1`:
+
+```{r}
+#fit the model
+mod1 <- lm(perrep_2016 ~ perrep_2012, data=subdata)
+
+
+#store the results
+mod1results <-  data.frame(observed=subdata$perrep_2016[-mod1$na.action], predicted=mod1$fitted, residual=mod1$resid)    
+
+
+#check out the head
+head(mod1results,3)
+
+
+#variance calculations
+var(mod1results$observed)
+var(mod1results$predicted)
+var(mod1results$residual)
+```
+   
+
+<br>
+<br>
+
+`mod2`:
+
+```{r}
+mod2  <- lm(perrep_2016 ~ median_rent, data=subdata)
+
+
+#store the results
+mod2results <-  data.frame(observed=subdata$perrep_2016[-mod2$na.action], predicted=mod2$fitted, residual=mod2$resid)   
+
+head(mod2results,3)
+
+
+#variance calculations
+var(mod2results$observed)
+var(mod2results$predicted)
+var(mod2results$residual)
+``` 
+
+
+
+<br>
+<br>
+
+`mod3`:
+
+```{r}
+mod3  <- lm(perrep_2016 ~ beforeL, data=subdata)
+
+
+#store the results
+mod3results <-  data.frame(observed=subdata$perrep_2016[-mod3$na.action], predicted=mod3$fitted, residual=mod3$resid)   
+
+
+head(mod3results,3)
+
+
+#variance calculations
+var(mod3results$observed)
+var(mod3results$predicted)
+var(mod3results$residual)
+
+``` 
+
+    
+
+<br>
+<br>
+
+### Exercise 4
+
+Model   Predictor       Var(response)   Var(predictions)    Var(residuals)  $R^2$
+------- --------------- --------------- ------------------- --------------- -----------
+`mod1`  `perrep_2012`   `0.02690597`    `0.02443953`        `0.002466443`   `0.9083553`
+`mod2`  `median_rent`   `0.02690597`    `0.02690597`        `0.02690597`    `0.9998142`
+`mod3`  `beforeL`       `0.02690597`    `0.001113426`       `0.02579254`    `0.04125627`
+
+ 
+
+
+
+<br>
+<br>
+
+### Exercise 5
+
+
+    
+<br>
+<br>
+<br>
+<br>
+
+
+
+
+
+```{r}
+mod2 <- lm(perrep_2016 ~ median_rent, data=subdata)
+summary(mod2)
+ggplot(subdata, aes(x=median_rent, y=perrep_2016)) + 
+    geom_point() + 
+    geom_smooth(method="lm")
+```
+```{r}
+head(data.frame(resid=mod2$residuals, residsq=mod2$residuals^2))
+
+```
+
+
+## Measuring model quality: cross validation
+
+### Exercise 6
+
+```{r}
+#take a sample of size 1 (try this a few times)
+sample_n(subdata, size=1)
+
+```
+
+```{r}
+#set the seed
+
+#take a sample of size 1 (try this a few times)
+set.seed(2000)
+sample_n(subdata, size=5)
+```
+
+
+
+
+<br>
+<br>
+
+### Exercise 7
+
+```{r}
+#IMPORTANT: set the random number seed
+set.seed(2000)
+#sample 50 of the 100 cases for the training set
+data_train <- sample_n(subdata, size=50)
+#take the the other 50 for testing
+data_test <- setdiff(subdata, data_train)
+
+#check out the dimensions
+dim(data_train)
+
+```
+
+```{r}
+#fit the model
+train_mod <- lm(perrep_2016 ~ median_rent, data=data_train)
+
+#calculate MSE
+mean(train_mod$residuals^2)
+
+#set up prediction function
+suppressPackageStartupMessages(library(mosaic))
+train_pred <- makeFun(train_mod)
+#make predictions
+test_predictions <- train_pred(median_rent = data_test$median_rent)
+
+
+#calculate residuals
+test_residuals <- data_test$perrep_2016 - test_predictions
+
+
+#calculate MSE
+mean(test_residuals^2)
+
+#plot
+ggplot(data_test, aes(x = median_rent, y = perrep_2016)) +
+geom_smooth(method ='lm', color = 'green') + geom_smooth(data = data_train,aes(x = median_rent, y = perrep_2016), method = 'lm', se = FALSE, color= 'blue')
+
+
+```
+
+
+
+
+
+<br>
+<br
+
+### Exercise 8 
+
+
+
+<br>
+<br>
+
+
+### Exercise 9
+
+```{r}
+x <- c(11:20)
+y <- matrix(c(1:1000), nrow=100)
+x[1]
+x[5]
+x[-1]
+y[1,]
+y[-1,]
+y[,1]
+y[1,1]
+```
+
+
+
+
+<br>
+<br>
+
+
+### Exercise 10
+
+
+```{r}
+#initialize the loop: set up a storage location for the 10 squared elements
+xsq <- rep(0, 10) 
+xsq
+
+#loop through all steps btwn brackets 10 times
+for(i in 1:10){
+    #subtract 11 from the ith value of x
+    sub11 <- x[i] - 11   
+    #square this and store it in the ith slot of xsq
+    xsq[i] <- sub11^2
+}
+
+#check out the results
+xsq
+```
+
+
+
+<br>
+<br>
+
+
+### Exercise 11
+
+
+```{r}
+#initialize the loop: set up a storage location for the 10 squared elements
+rmeans <- rep(0, nrow(y)) 
+#loop through all steps btwn brackets 10 times
+for (i in 1:nrow(y)){
+  rmeans[i] <- mean(y[i,])
+}
+#check out the results
+rmeans
+```
+
+```{r}
+bdays1000 <- matrix(rep(0, 30*1000),nrow = 1000)
+sharebday <- rep(0,1000)
+for (i in 1:1000){
+  bdays1000[i,] = sample(c(1:365), size=30, replace=TRUE)
+  sharebday[i] = length(unique(bdays)) < 30
+}
+
+probleast2sharebday = (sum(sharebday == TRUE))/1000
+
+```
+
+
+
+<br>
+<br>
+<br>
+<br>
+
+

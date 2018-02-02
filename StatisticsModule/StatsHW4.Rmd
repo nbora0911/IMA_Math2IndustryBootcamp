@@ -1,0 +1,288 @@
+---
+title: "Homework 4: Hypothesis Testing"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+
+**Load some handy packages:**
+
+```{r, warning=FALSE}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+```
+
+
+<br>
+<br>
+
+```{r}
+install.packages("lubridate")
+install.packages("ggmap")
+```
+
+
+### Exercise 1
+
+```{r}
+diam <- read.csv("https://www.macalester.edu/~ajohns24/data/Diamonds.csv")
+```
+
+```{r}
+diam %>% ggplot(aes(price, color = clarity)) + geom_density() #+ facet_wrap(~clarity)
+```
+```{r}
+mod <- lm(price~ clarity , diam)
+summary(mod)
+```
+c. Highest: VS2 3163 + 2694.8
+   Lowest: IF 2694.8
+   
+Suprising because it means more imperfections higher price.
+
+d. All of them are significant, which means there is evidence for relationship between price of the diamond and amount of imperfections it has.
+<br>
+<br>
+
+### Exercise 2
+
+```{r}
+diam %>% ggplot(aes(y= price, x = carat, color = clarity))+ geom_point() + geom_smooth(method = 'lm')
+```
+
+```{r}
+mod2 <- lm(price ~ carat + clarity, diam)
+summary(mod2)
+```
+c.
+```{r}
+#0.5 carat VVS2 diamond
+-1851.2 + 12226.4*(0.5) - 958.8
+```
+d. Highest Expected Price: IF
+   Lowest Expected Price :VS2
+
+The first model (mod1) gives the mean cost of a diamond with specific clarity calculated using the sample data. 
+
+```{r}
+table(diam$clarity)
+```
+
+e
+IF diamonds tend to be small (the bigger the diamond the more room for flaws) and small diamonds get less money.
+
+<br>
+<br>
+
+### Exercise 3
+
+
+```{r}
+foods <- read.csv("https://www.macalester.edu/~ajohns24/Data/BabyBoyFood.csv")
+head(foods)
+```
+```{r}
+#babies
+babies <- data.frame(sex=c("male","female"))
+
+#set the seed
+set.seed(111)
+
+#initialize
+births <- data.frame(nmales=rep(0,132), nfemales=rep(0,132))
+
+for(i in 1:132){
+    samp <- sample_n(babies, size=50, replace=TRUE)
+    births[i,] <- table(samp)
+}
+
+#add foods to the rows
+births$food <- foods$Type
+```
+
+b.
+```{r}
+births %>% mutate(diff = abs(births$nmales - births$nfemales)) %>% filter(diff == max(diff))
+```
+
+c. Type1 Error: Conclude that a food is linked to birth sex when it's not.
+
+d. 
+```{r}
+#set the seed
+set.seed(11)
+
+#initialize
+pvals <- rep(0,132)
+
+for(i in 1:132){
+    nmales <- births$nmales[i]
+    pvals[i] = prop.test(x=nmales, n=50)$p.value
+}
+
+#add pvals to data frame
+births$pvals <- pvals
+
+sum(births$pvals < 0.05)
+
+births %>% filter(pvals < 0.05)
+```
+
+<br>
+<br>
+
+### Exercise 4
+a. 5%
+b. 
+```{r}
+1- (0.95)^2
+```
+c. 
+
+```{r}
+1- (0.95)^100
+```
+```{r}
+births <- births %>% mutate(adj_pvals = 132*pvals)
+sum(births$adj_pvals < 0.05)
+```
+
+By making it harder to make Type I errors, we increase the probability of making Type II errors (missing real results).
+<br>
+<br>
+
+### Exercise 5
+
+```{r}
+bf <- read.csv("https://www.macalester.edu/~ajohns24/data/bodyfatsub.csv")
+
+```
+
+```{r}
+bfmod <- lm(BodyFat ~ Weight + Hip, bf)
+summary(bfmod)
+```
+b. 0.12525 
+
+```{r}
+bfmodw <- lm(BodyFat ~ Weight, bf)
+summary(bfmodw)
+```
+We found that weight co-efficient is statistically insignificant because Hip and Weight are correlated. Hence, we need only one of them to make a model without any reduncancy.
+
+```{r}
+bf %>% ggplot(aes(y= Weight, x = Hip)) + geom_point()
+```
+
+<br>
+<br>
+
+
+### Exercise 6
+```{r}
+Rides <- read.csv("https://www.macalester.edu/~ajohns24/Data/NiceRide2016sub.csv")
+dim(Rides)
+
+```
+```{r}
+colnames(Rides)[7] <- 'duration'
+subcol = c('Start.date','Start.station','End.station','duration', 'Account.type')
+subRides <- Rides[subcol]
+subRides <- subRides %>% filter(duration > 0)
+class(Rides$Start.date)
+
+subRides <- subRides %>% mutate(hours = as.factor(hour(mdy_hm(Start.date))), months = as.factor(month(mdy_hm(Start.date))))
+
+
+#Rides <- Rides 
+```
+
+
+<br>
+<br>
+
+
+### Exercise 7
+```{r}
+subRides %>% ggplot(aes(log(duration), color = Account.type)) + geom_density()
+```
+
+
+```{r}
+Ridesmod1 <- lm(log(duration) ~ Account.type, subRides)
+summary(Ridesmod1)
+```
+Estimate  of duration is exp(7.22288) for a casual biker and is exp(7.2288)/exp(0.84616) for a member.
+
+YES. p-value < 0.05
+<br>
+<br>
+
+### Exercise 8
+
+```{r}
+subRides %>% ggplot(aes(log(duration), color = months)) + geom_density()
+```
+```{r}
+Ridesmod2 <- lm(log(duration) ~ months, subRides)
+summary(Ridesmod2)
+```
+Difference in May - April
+```{r}
+(-exp(6.686) + exp(6.686+0.074))/60
+```
+
+Yes. Statistically significant as p-value < 0.05
+<br>
+<br>
+
+### Exercise 9
+sample size. when n is large, standard error is small, thus even small, unmeaningful effect sizes are statistically significant
+
+
+<br>
+<br>
+
+### Exercise 10
+
+```{r}
+Stations <- read.csv("https://www.macalester.edu/~ajohns24/Data/NiceRideStations.csv")
+
+```
+
+
+```{r}
+#join the Stations and Rides    
+MergedRides <- Rides %>%
+    left_join(Stations, by=c(Start.station = "Station")) %>%
+    rename(start_lat=Latitude, start_long=Longitude) %>%
+    left_join(Stations, by=c(End.station = "Station")) %>%
+    rename(end_lat=Latitude, end_long=Longitude)
+```
+
+```{r}
+suppressPackageStartupMessages(library(ggmap))
+MN <- get_map("Minneapolis", zoom=13)
+ggmap(MN) + 
+    geom_segment(data=MergedRides, aes(x=start_long, y=start_lat,
+    xend=end_long, yend=end_lat), alpha=0.07) + facet_wrap(~Account.type)
+```
+
+# ```{r}
+# ggmap(MN) + 
+#     geom_segment(data=MergedRides, aes(x=start_long, y=start_lat,
+#     xend=end_long, yend=end_lat), alpha=0.07) + facet_wrap(~hours)
+# ```
+
+
+
+
+```{r}
+Ridesmod4 <- lm(log(duration) ~ hours + Account.type, subRides)
+summary(Ridesmod4)
+```
+
+

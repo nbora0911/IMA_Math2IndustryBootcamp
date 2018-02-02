@@ -1,0 +1,111 @@
+---
+title: "HWPreBootCamp"
+author: "NehaBora"
+date: "June 11, 2017"
+output: html_document
+---
+
+
+Mother Jones magazine has tracked data on every mass shooting in the U.S. from 1982 to present.
+```{r}
+MJ <- read.csv("https://www.macalester.edu/~ajohns24/data/MassShootings.csv")
+MJ$Date <- as.Date(MJ$Day, format="%m/%d/%y")
+
+```
+
+1a)Each row represent a case. There are 82 cases in this data set with 23 variables describing each case. 
+
+```{r}
+dim(MJ)
+
+```
+
+1b) Summarize the number of cases in MJ. Examine the first cases of MJ.
+```{r}
+head(MJ)
+```
+
+List out names of all variables in MJ
+```{r}
+colnames(MJ)
+```
+
+###2. Cases by Mental Illness of the perpetrator.
+a. Category labels used for the mental illness variable
+```{r}
+levels(MJ$MentalIllness)
+
+```
+b. The number of cases that fall into each mental illness category.
+```{r}
+table(MJ$MentalIllness)
+```
+c. Investigate the prevalence of mental illness among perpetrators of mass shootings.
+
+```{r}
+library(ggplot2)
+ggplot(MJ,aes(x = MentalIllness)) + geom_bar(fill = 'red') + labs(x = 'Mental Illness', y = 'Counts')
+```
+
+d. Summarize your findings about mental illness.
+We can see that 54% of all the reported murders were committed by perpetrators suffering from mental illness. 
+
+###3. Ages of mass shooting perpetrators.
+
+a. Boxplot 
+```{r}
+boxplot(MJ$Age)
+```
+
+b. Histogram
+a. Binwidth = 0.5 years
+```{r}
+ggplot(MJ,aes(x = Age)) + geom_histogram(fill = 'red', binwidth = 0.5) + labs(x = 'Age', y = 'Counts')
+```
+b. binwidth = 50 years
+```{r}
+ggplot(MJ,aes(x = Age)) + geom_histogram(fill = 'red', binwidth = 50) + labs(x = 'Age', y = 'Counts') 
+```
+c. We can see the binwidth = 0.5 years it too small and binwidth = 50 years is too big. Neither of the bin sizes capture the trend in the data. 
+
+d. Density plot
+```{r}
+ggplot(MJ,aes(x = Age)) + geom_density(fill = 'blue') + labs(x = 'Age')
+```
+
+e. Comparison Boxplot, Histogram and Density plot
+Boxplot gives a very clear information about quantiles, mean, and range of the data. However, it is like a black box. Histogram and density plot give information about the distribution. Histogram and density plots provide better visualization of the data than box plot. However, density plot might provide better insight than histogram because the information that we obtain from histogram depends on the bin size used, which could be either too big or small or lucky a good value. I would prefer to use density plots and box plots. 
+
+
+###4 Numerical Summaries
+Unit: years
+```{r}
+mean(MJ$Age)   # Unit years
+median(MJ$Age)  # Unit years
+var(MJ$Age)    # Unit years^2
+sd(MJ$Age)     # Unit years
+
+# approximate the range of the middle 95% of ages.
+mean(MJ$Age) - 2*sd(MJ$Age)
+mean(MJ$Age) + 2*sd(MJ$Age)
+
+# Calculate the exact range of the middle 95% of ages
+quantile(MJ$Age, c(0.025,0.975))
+
+```
+The approximate values are not close to actual values because the distribution isn't  normally distributed. 
+
+### 5
+
+```{r}
+ggplot(MJ,aes(x = Age)) + geom_density(fill = 'blue') + labs(x = 'Age') +ggtitle('Density plot for MJ$Age')
+
+ggplot(MJ,aes(x = Age)) + geom_density(fill = 'blue', alpha = 0.5) + labs(x = 'Age') +ggtitle('Density plot for MJ$Age')
+
+ggplot(MJ,aes(x = Age)) + geom_density(fill = 'blue', alpha = 0.1) + labs(x = 'Age') +ggtitle('Density plot for MJ$Age') + geom_vline(xintercept=mean(MJ$Age), color="red") 
+
+ggplot(MJ,aes(x = Age)) + geom_density(fill = 'blue', alpha = 0.1) + labs(x = 'Age') +ggtitle('Density plot for MJ$Age') + geom_vline(xintercept=mean(MJ$Age), color="red") + geom_vline(xintercept=median(MJ$Age), color="green")
+
+ggplot(MJ,aes(x = Age)) + geom_density(fill = 'blue', alpha = 0.1) + labs(x = 'Age') +ggtitle('Density plot for MJ$Age') + geom_vline(xintercept=mean(MJ$Age), color="red") + geom_vline(xintercept=median(MJ$Age), color="green") + coord_cartesian(xlim = c(0, 100))
+```
+

@@ -1,0 +1,204 @@
+---
+title: "Homework 5: Classification with Logistic Regression"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+
+**Load packages:**
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(mosaic))
+```
+
+**Load data**
+
+```{r}
+diag <- read.csv("https://www.macalester.edu/~ajohns24/data/breastcancer2.csv")
+head(diag)
+```
+```{r}
+dim(diag)
+```
+
+
+### Exercise 1
+a.
+```{r}
+mod1 <- glm(Class ~ Thick, diag, family = 'binomial')
+summary(mod1)
+```
+
+
+
+```{r}
+diag$probPredictions <- mod1$fitted.values
+
+diag %>% ggplot(aes(y = probPredictions, x = Thick))+ stat_smooth(se=FALSE) 
+```
+
+c.
+```{r}
+100*(exp(0.94611) -1)
+```
+157.56 Percent increase in odds of getting a tumor for an increase in thichness by 1
+
+Yes. p-value <0.05
+
+0.875
+Malignant
+<br>
+<br>
+
+### Exercise 2
+a. p= 0.5: odds are 1 for malignant tumor. log(odds) = 0
+b. ~5.5 visually
+```{r}
+5.18/0.94
+```
+
+c. If thickness is greater than 5.5, conclude the tumor is malignant. If thickness is lesser than 5.5, conclude the tumor is benign.
+
+<br>
+<br>
+
+
+### Exercise 3
+    
+```{r}
+ggplot(diag, aes(x=Thick, fill=Class)) + 
+    geom_density(alpha=0.5) + 
+    geom_vline(xintercept=5.48)
+```
+a. sensitivity = P(classify a malignant case as malignant)
+   specificity = P(classify a benign case as benign)
+  
+b. 
+
+    
+```{r}
+#diagnose by the thickness cut-off
+table(diag$Class, diag$Thick >= 5.48)
+
+#diagnose by the probability cut-off
+table(diag$Class, mod1$fitted >= 0.5)  
+```
+```{r}
+sensitivity1 = 163/(163+75)
+sensitivity1
+
+specificity1 = 424/(424 + 19)
+specificity1
+
+```
+
+```{r}
+suppressPackageStartupMessages(library(boot))
+cv.err <- cv.glm(diag, mod1, K= 681)
+cv.err$delta
+```
+
+
+
+<br>
+<br>
+
+### Exercise 4
+
+Cutoff = 0.2
+```{r}
+
+t = ((log(0.2/0.8))+5.18)/0.94
+t
+#diagnose by the thickness cut-off
+table(diag$Class, diag$Thick >= t)
+
+#diagnose by the probability cut-off
+table(diag$Class, mod1$fitted >= 0.2)  
+```
+
+```{r}
+sensitivity2 = 207/(207+31)
+sensitivity2
+
+specificity2 = 341/(341 + 102)
+specificity2
+
+```
+```{r}
+ggplot(diag, aes(x=Thick, fill=Class)) + 
+    geom_density(alpha=0.5) + 
+    geom_vline(xintercept=t)
+```
+
+Lowering cut off  --> Increase in sensitivity and decrease in specificity
+<br>
+<br>
+
+### Exercise 5
+
+```{r}
+ggplot(diag, aes(x=jitter(Thick,0.75), y=jitter(USize,0.75), color=Class)) + 
+    geom_point() + 
+    labs(x="Thick", y="USize")
+```
+
+
+```{r}
+mod2 <- glm(Class ~ Thick * USize, diag, family="binomial")
+summary(mod2)
+```
+```{r}
+#set up a prediction function
+probFun <- makeFun(mod2)
+
+#set up a grid of Thick & USize pairs at which to make predictions
+griddata <- expand.grid(list(Thick=seq(0,10,length=50),USize=seq(0,10,length=50)))
+griddata <- griddata %>% 
+    mutate(prob=probFun(Thick=Thick, USize=USize)) %>%  #calculate the probability of malignancy at each pair
+    mutate(Diagnosis = (prob > 0.5))                    #classify each pair
+
+#plot the classification status (ie the diagnosis) at each pair
+ggplot(griddata, aes(x=Thick, y=USize) ) +
+    geom_raster(aes(x=Thick, y=USize, fill=Diagnosis))
+```
+
+```{r}
+table(diag$Class, mod2$fitted >= 0.5)
+```
+
+```{r}
+sensitivity3 = 220/(220+18)
+sensitivity3
+
+specificity3 = 429/(429+14)
+specificity3
+```
+
+```{r}
+mod3 <- glm(Class ~ Thick + USize, diag, family="binomial")
+summary(mod3)
+```
+
+```{r}
+#set up a prediction function
+probFun3 <- makeFun(mod3)
+
+#set up a grid of Thick & USize pairs at which to make predictions
+griddata1 <- expand.grid(list(Thick=seq(0,10,length=50),USize=seq(0,10,length=50)))
+griddata1 <- griddata1 %>% 
+    mutate(prob=probFun3(Thick=Thick, USize=USize)) %>%  #calculate the probability of malignancy at each pair
+    mutate(Diagnosis = (prob > 0.5))                    #classify each pair
+
+#plot the classification status (ie the diagnosis) at each pair
+ggplot(griddata1, aes(x=Thick, y=USize) ) +
+    geom_raster(aes(x=Thick, y=USize, fill=Diagnosis))
+```
+
+
+

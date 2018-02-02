@@ -1,0 +1,200 @@
+---
+title: "IMA Day 5 Notes"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+
+
+
+## Getting Started
+
+**Load packages required for exercises:**
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+```
+
+
+```{r}
+oring <- read.csv("https://www.macalester.edu/~ajohns24/data/NASA.csv")
+head(oring, 3)
+dim(oring)
+```
+
+
+
+
+```{r}
+oringMod1 <- lm(Broken ~ Temp, oring)
+summary(oringMod1)
+ggplot(oring, aes(x=Temp, y=Broken)) + 
+  geom_point() + 
+  geom_smooth(method="lm", se=FALSE)
+```
+
+
+<br>
+<br>
+
+
+
+## Logistic Regression
+
+### Exercise 1
+
+```{r}
+oringMod1 <- lm(Broken ~ Temp, oring)
+summary(oringMod1)
+```
+```{r}
+oringMod <- glm(Broken ~ Temp, oring, family="binomial")
+summary(oringMod)
+```
+
+
+<br>
+<br>
+
+### Exercise 2
+
+```{r}
+suppressPackageStartupMessages(library(mosaic))
+#store oringMod predictions on log scale
+oring$logPredictions <- logit(oringMod$fitted.values)
+
+#store oringMod predictions on odds scale
+oring$oddsPredictions <- exp(logit(oringMod$fitted.values))
+
+#store oringMod predictions on probability scale
+oring$probPredictions <- oringMod$fitted.values
+
+```
+    
+
+```{r}
+head(oring,1)
+```
+
+```{r}
+ggplot(oring, aes(x=Temp, y=logPredictions)) + 
+  stat_smooth(se=FALSE) + 
+  labs(y="log(odds of breaking)")
+
+```
+```{r}
+ggplot(oring, aes(x=Temp, y=oddsPredictions)) + 
+  stat_smooth(se=FALSE) + 
+  labs(y="odds of breaking")
+
+```
+```{r}
+ggplot(oring, aes(x=Temp, y=probPredictions)) +
+  stat_smooth(se=FALSE) +
+  labs(y="probability of breaking")
+```
+
+<br>
+<br>
+
+
+### Exercise 3
+a. 
+```{r}
+100*(exp(-0.1156) - 1)
+```
+11% decrease in odds for an increase of 1F
+
+$H_{0}$ : No association between Temperature and odds of breaking
+ 
+<br>
+<br>
+
+### Exercise 4
+
+```{r}
+suppressPackageStartupMessages(library(mosaic))
+probFun <- makeFun(oringMod)
+probFun(Temp = 31)
+```    
+
+d.
+```{r}
+1- (1-0.8177744)^6
+```
+
+
+ 
+<br>
+<br>
+
+
+## Details
+
+
+```{r}
+suppressPackageStartupMessages(library(fivethirtyeight))
+data(bechdel)
+head(bechdel, 3)
+```
+
+
+<br>
+<br>
+
+### Exercise 5
+```{r}
+bechdelMod <- glm(as.factor(binary) ~ year, bechdel, family="binomial")
+summary(bechdelMod)
+```
+    
+```{r}
+100*(exp(0.020647) -1)
+```
+
+There is a 2% increase in odds for an increase of a year
+$H_{0}$ there no association
+```{r}
+probFun <- makeFun(bechdelMod)
+probFun(year = 2017)
+```
+
+
+<br>
+<br>
+
+### Exercise 6
+
+```{r}
+median(bechdel$budget_2013)
+bechdel <- bechdel %>% 
+    mutate(bigbudget=(budget_2013>36995786))
+```
+
+
+```{r}
+bechdelMod2 <- glm(as.factor(binary) ~ year * bigbudget, bechdel, family="binomial")
+summary(bechdelMod2)
+```
+
+
+```{r}
+#store predictions on probability scale
+bechdel$probPredictions <- bechdelMod2$fitted.values
+
+#plot
+ggplot(bechdel, aes(x=year, y=probPredictions, color=bigbudget)) +
+  stat_smooth(se=FALSE) +
+  labs(y="probability of passing the Bechdel test")
+```
+
+<br>
+<br>
+
+
+
+

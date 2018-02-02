@@ -1,0 +1,468 @@
+---
+title: "Homework 3: Confidence Intervals"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+
+**Load some handy packages:**
+
+```{r, warning=FALSE}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+```
+
+
+<br>
+<br>
+
+## Constructing Confidence Intervals
+
+
+```{r}
+sleep = read.csv("https://www.macalester.edu/~ajohns24/Data/SleepStudy2.csv")
+head(sleep, 2)
+```
+<br>
+<br>
+
+### Exercise 1
+
+
+```{r}
+n = nrow(sleep)
+mean(sleep$Difference)
+sd(sleep$Difference)/sqrt(n)
+```
+
+1c 95%, 5%
+<br>
+<br>
+
+### Exercise 2
+
+2a. 95%  
+2b
+```{r}
+mean(sleep$Difference) + 2*sd(sleep$Difference)/sqrt(n)
+mean(sleep$Difference) - 2*sd(sleep$Difference)/sqrt(n)
+```
+2c.
+```{r}
+t.test(sleep$Difference, conf.level=0.95)
+```
+
+    
+<br>
+<br>
+
+### Exercise 3
+Yes. 0 falls within the confidence interval. Thus, our data don't signifcantly support the claim that that the average reaction time
+after 2 days of sleep deprivation is greater (slower) than after 0 days of sleep deprivation.
+
+
+
+<br>
+<br>
+
+## Interpreting Confidence Level
+ 
+
+```{r}
+#attach the library
+suppressPackageStartupMessages(library(gapminder))
+
+#load the data
+data(gapminder)
+
+#examine the codebook
+?gapminder
+```
+
+
+<br>
+
+### Exercise 4
+```{r}
+#4a. Number of cases
+nrow(gapminder)
+#4b For what years do we have data?
+unique(gapminder$year)
+
+#4c For how many different countries do we have data?
+length(unique(gapminder$country))
+```
+4a. Each case represent is Country's life expectancy and gpa per capita for a particular year along with the continent it belongs to.
+
+
+
+
+<br>
+
+### Exercise 5
+5a
+```{r}
+gapminder%>% ggplot(aes(y = lifeExp, x= gdpPercap)) + geom_point() + geom_smooth(method = 'lm') 
+```
+
+
+5b. Data points are not independent. Afghanistan's lifeExp (GDP) is dependent on previous year's lifeExp (GDP).  Also, residuals are not normally distributed with mean zero. (lack of fit)
+```{r}
+mod <- lm( lifeExp ~ gdpPercap, gapminder )
+ModResults <- data.frame(observed = gapminder$lifeExp, predicted = mod$fitted.values, residual = mod$residuals)
+ggplot(ModResults, aes(sample=residual)) + 
+    geom_qq()
+```
+
+
+```{r}
+gapminder%>% ggplot(aes(y = lifeExp, x= log(gdpPercap))) + geom_point() + geom_smooth(method = 'lm') 
+```
+
+```{r}
+gap2007 <- gapminder %>% 
+    filter(year==2007)
+
+gap2007 %>% ggplot(aes(x = log(gdpPercap), y = lifeExp, color = continent, size = pop)) + geom_point()
+```
+
+
+<br>
+<br>
+
+
+### Exercise 6
+
+```{r}
+ggplot(gap2007, aes(x=lifeExp)) + 
+    geom_histogram(color="white")
+
+```
+
+```{r}
+mean(gap2007$lifeExp)
+
+#set the seed
+set.seed(39)
+
+#take a sample
+samp1 <- sample_n(gap2007, size=25)
+
+#calculate the sample mean & sd
+mean(samp1$lifeExp)
+## [1] 72.5
+sd(samp1$lifeExp)
+## [1] 9.724
+```
+```{r}
+mean(samp1$lifeExp)+ 2*sd(samp1$lifeExp)/sqrt(25)
+mean(samp1$lifeExp)- 2*sd(samp1$lifeExp)/sqrt(25)
+
+```
+
+```{r}
+t.test(samp1$lifeExp, conf.level=0.95)
+```
+6c. No. True mean falls outside our CI
+
+<br>
+<br>
+
+### Exercise 7
+
+```{r}
+#set the seed
+set.seed(90)
+
+#initialize the for loop
+CIsimulation <- data.frame(lower=rep(0,100), upper=rep(0,100))
+
+
+#run the for loop
+for(i in 1:100){
+    samp <- sample_n(gap2007, size=25)
+    CIsimulation[i,] <- t.test(samp$lifeExp, conf.level=0.95)$conf.int
+}
+
+```
+
+7b. 
+```{r}
+CIsimulation <- CIsimulation %>% mutate(experiment = c(1:100), cover = (lower < 67.00742) & (upper > 67.00742))
+```
+
+```{r}
+ggplot(CIsimulation, aes(y=experiment, x=lower, color=cover)) + 
+    geom_segment(aes(x=lower, xend=upper, y=experiment, yend=experiment)) + 
+    labs(x="confidence interval") + 
+    lims(x=c(50,80))
+```
+```{r}
+CIcovered <- CIsimulation %>% filter(cover == TRUE)
+nrow(CIcovered)
+```
+
+<br>
+<br>
+
+### Exercise 8
+
+```{r}
+#set the seed
+set.seed(90)
+
+#initialize the for loop
+CIsimulation <- data.frame(lower=rep(0,100), upper=rep(0,100))
+
+
+#run the for loop
+for(i in 1:100){
+    samp <- sample_n(gap2007, size=75)
+    CIsimulation[i,] <- t.test(samp$lifeExp, conf.level=0.95)$conf.int
+}
+
+
+CIsimulation <- CIsimulation %>% mutate(experiment = c(1:100), cover = (lower < 67.00742) & (upper > 67.00742))
+
+ggplot(CIsimulation, aes(y=experiment, x=lower, color=cover)) + 
+    geom_segment(aes(x=lower, xend=upper, y=experiment, yend=experiment)) + 
+    labs(x="confidence interval") + 
+    lims(x=c(50,80))
+
+```
+
+Larger sample size = narrower CI
+
+<br>
+<br>
+
+### Exercise 9
+
+Narrower but inaccurate as it is only 68% CI
+```{r}
+#set the seed
+set.seed(90)
+
+#initialize the for loop
+CIsimulation <- data.frame(lower=rep(0,100), upper=rep(0,100))
+
+
+#run the for loop
+for(i in 1:100){
+    samp <- sample_n(gap2007, size=25)
+    CIsimulation[i,] <- t.test(samp$lifeExp, conf.level=0.68)$conf.int
+}
+
+
+CIsimulation <- CIsimulation %>% mutate(experiment = c(1:100), cover = (lower < 67.00742) & (upper > 67.00742))
+
+ggplot(CIsimulation, aes(y=experiment, x=lower, color=cover)) + 
+    geom_segment(aes(x=lower, xend=upper, y=experiment, yend=experiment)) + 
+    labs(x="confidence interval") + 
+    lims(x=c(50,80))
+
+```
+
+
+9c
+
+```{r}
+#set the seed
+set.seed(90)
+
+#initialize the for loop
+CIsimulation <- data.frame(lower=rep(0,100), upper=rep(0,100))
+
+
+#run the for loop
+for(i in 1:100){
+    samp <- sample_n(gap2007, size=25)
+    CIsimulation[i,] <- t.test(samp$lifeExp, conf.level=0.9997)$conf.int
+}
+
+
+CIsimulation <- CIsimulation %>% mutate(experiment = c(1:100), cover = (lower < 67.00742) & (upper > 67.00742))
+
+ggplot(CIsimulation, aes(y=experiment, x=lower, color=cover)) + 
+    geom_segment(aes(x=lower, xend=upper, y=experiment, yend=experiment)) + 
+    labs(x="confidence interval") + 
+    lims(x=c(50,80))
+
+```
+
+
+
+Increasing % confidence means we are more likely to get an interval which captures the true mean but the size of the interval gets bigger. 
+The greater the confidence level, the greater our confidence that the CI covers the population parameter but the wider (and less useful) the interval. Why 95%? Tradition.
+<br>
+<br>
+
+
+
+## Confidence & Prediction Intervals for Regression Models
+
+```{r}
+PopMod <- lm(lifeExp ~ log(gdpPercap), data=gap2007)
+PopMod$coef
+summary(PopMod)
+```
+
+
+### Exercise 10
+```{r}
+set.seed(60)
+samp50 <- sample_n(gap2007, size=50)
+sampMod <- lm(lifeExp ~ log(gdpPercap), data=samp50)
+summary(sampMod)
+```
+10a. $R^2 = 0.6687$ which means 66.87% of the variability in the data can be explained by our model
+
+10b. $\hat{\beta_0} = 3.93$ and $\hat{\beta_1} = 7.3636$ 
+
+10c. 95% CI
+```{r}
+#$\hat{\beta_0}$
+3.93 + 2*6.5152
+3.93 - 2*6.5152
+
+7.3636 + 2*0.7482
+7.3636 - 2*0.7482
+
+```
+```{r}
+confint(sampMod, level=0.95)
+```
+Yes, the interval for the GDP coef is above 0
+<br>
+<br>
+
+### Exercise 11
+
+```{r}
+3.93 + 7.3636 *log(42951.65)
+```
+```{r}
+gap2007 %>% filter(country=="United States")
+```
+```{r}
+predict(sampMod, newdata=data.frame(gdpPercap=42951.65),
+
+interval="confidence", level=0.95)
+```
+
+
+```{r}
+predict(sampMod, newdata=data.frame(gdpPercap=42951.65),
+    interval="prediction", level=0.95)
+```
+
+
+<br>
+<br>
+
+### Exercise 12
+
+```{r}
+samp50 %>% ggplot(aes(x = log(gdpPercap), y = lifeExp)) + geom_point() + geom_smooth(method = 'lm')
+```
+
+
+```{r}
+PredInt = data.frame(samp50, predict(sampMod, newdata=data.frame(gdpPercap=samp50$gdpPercap), 
+    interval = "prediction"))
+
+#Plot model with confidence and prediction bands
+ggplot(PredInt, aes(x=log(gdpPercap), y=lifeExp)) + 
+    geom_point() + 
+    geom_smooth(method="lm", aes(fill="confidence"), alpha = 0.5) + 
+    geom_ribbon(aes(y=fit, ymin=lwr, ymax=upr, fill="prediction"), alpha=0.2)
+```
+
+<br>
+<br>
+
+
+## More Practice with Models and Confidence Intervals
+
+
+### Exercise 13
+
+```{r}
+yeargap <- gapminder %>% filter(year == 1952 | year == 2007)
+```
+
+```{r}
+yeargap$year <- as.factor(yeargap$year)
+```
+
+```{r}
+yeargap %>% ggplot(aes(y = lifeExp, x = log(gdpPercap), color = year)) + geom_smooth(method = 'lm')
+```
+
+```{r}
+yearmod <- lm(lifeExp ~ log(gdpPercap) + year, yeargap)
+summary(yearmod)
+```
+
+```{r}
+#95% CI for 2007
+
+7.8 + 2*0.3799
+7.8 - 2*0.3799
+
+
+-10.05+ 9.84 + 2*(2.95+0.9950)
+-10.05+ 9.84 - 2*(2.95+0.9950)
+
+#95% CI in 1952
+-10.05 + 2*(2.95)
+-10.05 - 2*(2.95)
+
+#95% CI difference 2007-1952
+ 9.84 + 2*(0.9950)
+ 9.84 - 2*(0.9950)
+
+```
+Yes. When GDP is adjusted the year2007 has life expectancy increase of more than 0 years as compared to year1952
+### Exercise 14
+```{r}
+AAgap <- gap2007 %>% filter(continent == 'Americas' | continent == 'Asia')
+```
+
+```{r}
+AAgap %>% ggplot(aes(y = lifeExp, x = log(gdpPercap), color = continent)) + geom_smooth(method = 'lm')
+
+```
+```{r}
+AAmod <- lm(lifeExp ~ log(gdpPercap) + continent, AAgap)
+summary(AAmod)
+```
+```{r}
+-1.4740 + 2*1.0938
+-1.4740 - 2*1.0938
+```
+
+No. We don't have enough evidence to conclude that when controlling for GDP, life expectancies are significantly higher in the Americas than in Asia because 0 lies in the CI.
+
+
+
+
+### Animation
+
+```{r}
+setwd('D:/Math2IndustryBootCamp2017')
+for(i in seq(1952,2007,5)){
+  #name = paste(as.character(i),'plot.png',sep='')
+  #png(name)
+  i
+  gapminder %>% filter(year==i) %>% ggplot(aes(x = log(gdpPercap), y = lifeExp, color = continent, size = pop)) + geom_point()
+  #dev.off()
+  }
+
+```
+
+
+

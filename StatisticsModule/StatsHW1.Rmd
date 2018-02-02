@@ -1,0 +1,460 @@
+---
+title: "Homework 1: Visualizing & Modeling Variability"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+
+**Load some handy packages:**
+
+```{r, warning=FALSE}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+```
+
+
+<br>
+<br>
+
+
+
+# Births
+
+
+```{r}
+#load the fivethirtyeight library
+suppressPackageStartupMessages(library(fivethirtyeight))
+
+#load the births data
+data(US_births_2000_2014)
+head(US_births_2000_2014)
+nrow(US_births_2000_2014)
+```
+
+
+<br>
+<br>
+
+## Exercise 1
+1a. Unit of observation is total number of births in US on a given date and day
+1b. 5479 units of observations in this data
+
+
+<br>
+<br>
+
+## Exercise 2
+
+2a.
+```{r}
+library(dplyr)
+Births2014 <- US_births_2000_2014 %>% filter(year == 2014)
+head(Births2014,2)
+```
+
+2b. Construct a univariate plot that allows you to visualize the variability in births from day to day in 2014.
+
+```{r}
+
+Births2014 %>% ggplot(aes(births)) + geom_density()
+```
+2c. The time of year might explain some of this variability. Construct a plot that illustrates the relationship between births and date in 2014. NOTE: Make sure that births, our variable of interest, is on the y-axis.
+
+```{r}
+Births2014 %>% ggplot(aes(y= births, x =date, colour = day_of_week)) + geom_point()
+```
+We see that there are fewer number of births on weekend compared to weekdays.
+The anamolies appear on Friday. This could be due to holidays which fall during these days: Christmas holidays for examples
+
+Number of births: Weekday > Saturday > Sunday
+```{r}
+Births2014[355:365,] %>% ggplot(aes(y= births, x =date, colour = day_of_week)) + geom_point()
+```
+<br>
+<br>
+Number of Births in 2014 in US fall are segregated into two sets: Weekdays and Weekend/Holidays. We see in the table below that mean births during weekdays are higher than weekends.
+```{r}
+Births2014 %>% group_by(day_of_week) %>%summarize(means = mean(births))
+```
+## Exercise 3
+```{r}
+allyears <- full_join(US_births_1994_2003, US_births_2000_2014)
+```
+```{r}
+allyears %>% ggplot(aes(y = births, x = date,color = day_of_week)) + geom_point()
+```
+
+3b. We see that the pattern segregation of number of births on weekdays/weekends exists accross all years. However, we separation between these two groups has increased over years.
+<br>
+<br>
+
+## Excercise 3.5 
+Notice the sine wave behaviour over years.
+In a year, number of births increase from Jan to September and then decrease.
+
+
+```{r}
+allyears %>% group_by(year) %>% summarize(means = mean(births)) %>% ggplot(aes(x= year, y = means)) + geom_point()
+
+```
+
+
+## Exercise 4
+
+4a.
+```{r}
+frionly <- allyears %>% filter(day_of_week == 'Fri') %>% mutate(fri13 = (date_of_month == 13))
+
+head(frionly)
+```
+
+```{r}
+
+frionly %>% ggplot(aes(births, color= fri13)) +geom_density() #facet_wrap(~fri13)
+```
+Yes, we see that the density plot from FRI13 has lower mean than births on other fri dates.
+
+
+
+<br>
+<br>
+<br>
+<br>
+
+
+
+
+# Interaction
+
+
+```{r}
+campaigns = read.csv("https://www.macalester.edu/~ajohns24/data/CampaignSpending.csv")
+```
+
+<br>
+<br>
+
+## Exercise 5
+```{r}
+campaigns = read.csv("https://www.macalester.edu/~ajohns24/data/CampaignSpending.csv")
+
+#names(campaigns)
+ggplot(campaigns, aes(x=votes1st)) + 
+    geom_histogram(color="white")
+```
+5a
+
+```{r}
+ggplot(campaigns, aes(x=votes1st, color = incumb)) + 
+    geom_density()
+```
+5b
+```{r}
+campaigns %>% group_by(incumb) %>%
+    summarize(means=mean(votes1st, na.rm=TRUE))
+```
+5c
+```{r}
+model1 <- lm(votes1st ~ incumb, data=campaigns)
+summary(model1)
+```
+Mean estimate of number of 1st preference votes for a challenger is 2722.0 and incumbent has 4361.2 more votes than challenger as 1st preference. 
+
+
+
+
+<br>
+<br>
+
+## Exercise 6
+```{r}
+campaigns %>% ggplot(aes(x = votes1st, y= totalexp, color = incumb)) + geom_point() + geom_smooth(method = 'lm') + facet_wrap(~incumb)
+
+```
+
+
+```{r}
+model2 <- lm(votes1st ~ totalexp + incumb, data=campaigns)
+summary(model2)
+```
+
+```{r}
+ggplot(campaigns, aes(x=totalexp, y=votes1st, col=incumb)) + 
+    geom_point(size=0.5) + 
+    geom_abline(intercept=1031, slope=0.1745, col="red") +
+    geom_abline(intercept=3795, slope=0.1745, col="blue")
+```
+6b.
+Full model
+$votes1st = 1.031e+03 + (1.745e-01)*totalexp + (2.764e+03)* incumbYes $
+
+Challengers:
+$votes1st = 1.031e+03 + 1.745e-01 totalexp $
+
+Incumbents:
+$votes1st = 3.795e+03 + (1.745e-01)*totalexp$
+
+6c. 
+Full model: 
+1. intercept: The number of 1st preference votes for a challengers when the expense is zero
+2. Total exp- co-efficient: The amount of increase in 1st preference votes when totalexp increases by a Euro
+3. IncumbYes Coeff:  The number of 1st preference votes that a incumb will recieve more than a challenger when total expense is zero
+
+Challenger model: 
+1. intercept: The number of 1st preference votes for a challengers when the expense is zero
+2. Total exp- co-efficient: The amount of increase in 1st preference votes when totalexp increases by a Euro
+
+Incumbent Model:
+Challenger model: 
+1. intercept: The number of 1st preference votes for a incumbent when the expense is zero
+2. Total exp- co-efficient: The amount of increase in 1st preference votes when totalexp increases by a Euro
+
+```{r}
+test1 = data.frame(totalexp = 10000, incumb = 'No')
+
+predict(model2, test1)
+
+test2 = data.frame(totalexp = 10000, incumb = 'Yes')
+predict(model2,test2)
+```
+
+```{r}
+
+suppressPackageStartupMessages(library(mosaic))
+model2_pred <- makeFun(model2)    
+model2_pred(incumb="No", totalexp=10000)
+model2_pred(incumb="Yes", totalexp=10000)
+
+```
+
+<br>
+<br>
+
+## Exercise 7
+
+
+```{r}
+ggplot(campaigns, aes(x=totalexp, y=votes1st, col=incumb)) + 
+    geom_point(size=0.5) + 
+    geom_abline(intercept=1031, slope=0.1745, col="red") +
+    geom_abline(intercept=3795, slope=0.1745, col="blue")
+```
+
+```{r}
+newmodel <- lm(votes1st ~ totalexp * incumb, campaigns)
+summary(newmodel)
+```
+Full Model:
+
+votes1st = 690.51 + 0.20966totalexp + 4813.89incumbYes - 0.12587Totalexp*incumbYes
+Full model: 
+1. intercept: The number of 1st preference votes for a challenger when the expense is zero
+2. Total exp- co-efficient: The amount of increase in 1st preference votes when totalexp increases by a Euro for a challenger
+3. IncumbYes Coeff:  The number of 1st preference votes that a incumb will recieve more than a challenger when total expense is zero
+4. Total*IncumbYes Coeff:  The amount of increase that a incumb will recieve more than a challenger when total expense increase by 1
+
+Challenger
+votes1st= 690.51 + 0.20966totalexp
+
+Incumbent
+votes1st= 690.51 + 4813.9 + (0.20966 -0.12587)*totalexp
+
+```{r}
+test3 = data.frame(totalexp = 10000, incumb ='No')
+predict(newmodel, test3)
+
+test4 = data.frame(totalexp = 10000, incumb ='Yes')
+predict(newmodel, test4)
+```
+
+```{r}
+newmodel_pred <- makeFun(newmodel)    
+newmodel_pred(incumb="No", totalexp=10000)
+newmodel_pred(incumb="Yes", totalexp=10000)
+```
+```{r}
+ggplot(campaigns, aes(x=totalexp, y=votes1st, col=incumb)) + 
+    geom_point() + 
+    geom_smooth(method="lm")
+```
+
+
+
+
+<br>
+<br>
+<br>
+<br>
+
+
+# Covariates
+
+
+```{r}
+#Load the data:suppressPackageStartupMessages(library(mosaic))
+data(CPS85)
+head(CPS85,3)
+ggplot(CPS85, aes(y=wage, x=married)) + 
+    geom_boxplot()
+```
+
+```{r}
+cpsmod1 <- lm(wage ~ married, data = CPS85)
+msummary(cpsmod1)
+```
+<br>
+<br>
+## Exercise 8
+```{r}
+names(CPS85)
+CPS85 %>% group_by(married,sex) %>% summarize(meanwage= mean(educ))
+```
+Age could be a confounding variable
+
+
+<br>
+<br>
+
+## Exercise 9
+
+```{r}
+cpsmod2 <- lm(wage ~ exper + married, data = CPS85)
+summary(cpsmod2)
+```
+
+
+
+```{r}
+ggplot(CPS85, aes(y=wage, x=exper, color=married)) + 
+    geom_smooth(method="lm")
+```
+9c. Compare two workers that both have 10 years of experience but one is married and the other is single. By how much do their predicted wages to differ? Use the model formula to calculate this difference and the plot to provide intuition.
+
+```{r}
+test4 = data.frame(exper = 10, married = 'Married')
+test5 = data.frame(exper = 10, married = 'Single')
+test6 = data.frame(exper = 20, married = 'Married')
+test7 = data.frame(exper = 20, married = 'Single')
+predict(cpsmod2,test4) - predict(cpsmod2,test5)
+predict(cpsmod2,test6) - predict(cpsmod2,test7)
+
+```
+The difference is same because the model assumes the slopes to be same for married and single people. This is not th case in reality as can be seen from the graph. So, we should add the interaction term and we might get answers as expected from the graph. 
+
+The difference in wages should decrease with time. 
+```{r}
+cpsmod21 <- lm(wage ~ exper * married, data = CPS85)
+summary(cpsmod21)
+```
+```{r}
+predict(cpsmod21,test4) - predict(cpsmod21,test5)
+predict(cpsmod21,test6) - predict(cpsmod21,test7)
+```
+
+<br>
+<br>
+
+## Exercise 10
+
+```{r}
+cpsmod3 <- lm(wage ~ exper + educ + sector + married, data=CPS85)
+summary(cpsmod3)
+```
+
+10a. 16 parallel planes
+
+10b.The wages differ by 0.3984 dollar per hour
+```{r}
+test81 = data.frame(exper = 10, educ = 16, sector = 'service', married = 'Married')
+test82 = data.frame(exper = 10, educ = 16, sector = 'service', married = 'Single')
+
+predict(cpsmod3,test81)- predict(cpsmod3,test82)
+```
+
+10c. They differ by 0.3984
+
+```{r}
+test91 = data.frame(exper = 20, educ = 12, sector = 'manuf', married = 'Married')
+test92 = data.frame(exper = 20, educ = 12, sector = 'manuf', married = 'Single')
+
+predict(cpsmod3,test91)- predict(cpsmod3,test92)
+```
+10d marriedSingle coefficient tells us differene in wage between married and single person when they have same years of experience, education and work in the same industry. 
+
+10e. Since in cpsmod3 we have more covariates which explain the variability in wages, there is a lower correlation between wage and married status.
+
+This means although there was correlation between wages and married status, there wasn't a strong causation.
+
+<br>
+<br>
+
+## Exercise 11
+
+11a. clerical
+11b. Most- manag, least - service
+11c. Educ coefficient: The increase in wages earned when years of experience increases by 1
+11d. manag- coefficient- The amount of wages earned more than a person in clerical sector when a person is married, has 0 experience and no education. 
+
+
+<br>
+<br>
+<br>
+<br>
+
+
+
+
+# Least Squares Estimation
+
+
+
+
+```{r}
+#Load the data:
+suppressPackageStartupMessages(library(mosaic))
+data(Galton)
+?Galton
+
+```
+
+
+<br>
+<br>
+
+## Exercise 12
+
+```{r}
+htmodel <- lm(height ~ father, data=Galton)
+summary(htmodel)
+```
+a) 2
+b) - 4.5
+
+
+<br>
+<br>
+
+## Exercise 13
+```{r}
+htmodelResults <-  data.frame(observed=Galton$height, 
+    predicted=htmodel$fitted.values, residual=htmodel$residuals)
+head(htmodelResults)
+```
+
+13b Observed - predicted = residual
+13c 
+```{r}
+mean(htmodelResults$residual)
+```
+13d
+```{r}
+summary(htmodel)
+```
+13e.  Residual standard error = sd(residuals)
+```{r}
+sd(htmodel$residuals)
+```
+

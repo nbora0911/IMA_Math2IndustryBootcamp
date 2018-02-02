@@ -1,0 +1,458 @@
+---
+title: "IMA Day 3 Notes"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+
+
+
+## Getting Started
+
+**Load packages required for exercises:**
+
+```{r}
+suppressPackageStartupMessages(library(rvest))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyr))
+```
+
+
+## Scraping & Wrangling Data {-}
+
+**Scrape data from [Wiki](https://en.wikipedia.org/wiki/Current_members_of_the_United_States_House_of_Representatives)**
+
+```{r}
+#load the rvest library (if it's not already, install it first!)
+suppressPackageStartupMessages(library(rvest))
+
+#copy the Wiki url
+url <- "https://en.wikipedia.org/wiki/Current_members_of_the_United_States_House_of_Representatives"
+
+#scrape ALL tables from the url
+allTables <- read_html(url) %>% 
+    html_nodes("table") %>% 
+    html_table(fill=TRUE)
+
+#the 7th table corresponds to "Voting members by state".  store this as "houseDirty"
+houseDirty <- allTables[[7]]
+
+#check out the head of houseDirty
+names(houseDirty)
+
+head(houseDirty, 3)
+
+date()
+
+write.csv(houseDirty, "D:/Math2IndustryBootCamp2017/house.csv", row.names=FALSE)
+
+
+```
+
+
+<br>
+<br>
+
+### Exercise 1
+
+```{r}
+#part a
+mytext <- "This is my text"
+gsub("s", "z", mytext)
+gsub(" ", "", mytext)
+substr(mytext, 1, 3)
+substr(mytext, 4, 7)
+
+#part b
+mynumber <- "2017"
+class(mynumber)
+mynewnumber <- as.numeric(mynumber)
+mynewnumber + 2
+class(mynewnumber)
+
+```
+
+<br>
+<br>
+
+### Exercise 2
+
+```{r}
+#load the dplyr library for some wrangling functions
+suppressPackageStartupMessages(library(dplyr))
+
+#take out the third column (the blank "Party" variable)
+house <- houseDirty[,-3]
+
+#remove the spaces from the variable names
+names(house) <- gsub(" ", "", names(house))
+
+#check the class of the Assumedoffice variable 
+class(house$Assumedoffice)
+
+#in 1 set of code: 
+#remove the "*" from the Assumedoffice measurements
+#convert Assumedoffice to numeric
+#define an "Age" variable
+house$Assumedoffice <- substr(house$Assumedoffice,1,4) %>% as.numeric(house$Assumedoffice) 
+
+house <- house %>% mutate(Age = 2017 - house$Bornin)
+#confirm that your house is consistent with the results in the notes
+
+
+```
+
+<br>
+<br>
+
+## Sampling Variability
+```{r}
+suppressPackageStartupMessages(library(ggplot2))
+mean(house$Age, na.rm=TRUE)
+sd(house$Age, na.rm=TRUE)
+ggplot(house, aes(x=Age)) + 
+    geom_histogram(color="white") + 
+    labs(title="POPULATION distribution")
+```
+
+
+### Exercise 3
+
+```{r}
+#choose your own random number seed
+set.seed(37)
+#take a sample of 16 members
+sample1 <- sample_n(house,size = 16)
+
+#check the properties
+head(sample1)
+dim(sample1)
+mean(sample1$Age)#-mean(house$Age)
+sd(sample1$Age)#- sd(house$Age)
+```
+
+
+part b:
+```{r}
+ggplot(sample1, aes(x=Age)) + 
+    geom_histogram(color="white", binwidth=5) + 
+    labs(title="SAMPLE Distribution (n=16)") + 
+    lims(x=c(30,90), y=c(0,80))
+
+```    
+
+part c:
+```{r}
+
+```
+
+
+
+
+<br>
+<br>
+
+### Exercise 4
+
+```{r}
+#take another sample
+
+```
+
+
+
+
+<br>
+<br>
+
+
+## Sampling Distributions
+
+
+
+<br>
+
+Sample Size   Shape         Min $\overline{y}$  Mean $\overline{y}$   Max $\overline{y}$  St Dev of $\overline{y}$ 
+------------- ------------- ------------------- --------------------- ------------------- --------------------------
+$n = 16$      Bell          50                  58.572                66.75               2.5
+$n = 64$      Smaller Bell  55.10               58.49                 63.48               1.24
+$n = 100$     Smallest Bell 55.77               58.55                 61.64               0.934
+
+
+      
+<br>
+<br>
+
+### Exercise 5
+
+```{r}
+#set the seed
+set.seed(2)
+
+#initialize the for loop
+simulation <- data.frame(n16=rep(0,1000), n64=rep(0,1000), n100=rep(0,1000))
+
+#run the for loop
+for (i in 1:1000){
+  
+#take a sample of 16 members
+  sample16 <- sample_n(house,size = 16)
+  simulation$n16[i] = mean(sample16$Age)
+  sample64 <- sample_n(house,size =64)
+  simulation$n64[i] = mean(sample64$Age)
+  sample100 <- sample_n(house,size =100)
+  simulation$n100[i] = mean(sample100$Age)
+}
+
+
+```   
+
+```{r}
+min(simulation$n100)
+mean(simulation$n100)
+max(simulation$n100)
+sd(simulation$n100)
+
+```
+```{r}
+ggplot(simulation, aes(x=n100)) + 
+    geom_histogram(color="white", binwidth=2) + 
+    labs(title="SAMPLING Distribution") + 
+    lims(x=c(45,75)) + 
+    geom_vline(xintercept=58.54734, color="red")
+```
+
+
+<br>
+<br>
+
+### Exercise 6
+
+```{r}
+
+```
+
+
+    
+
+
+<br>
+<br>
+
+### Exercise 7
+
+```{r}
+
+```
+
+
+<br>
+<br>
+
+### Exercise 8
+
+```{r}
+
+```
+
+
+<br>
+<br>
+
+### Exercise 9
+
+```{r}
+#follow directions
+head(simulation, 3)
+##     n16   n64  n100
+## 1 57.81 59.55 61.29
+## 2 57.06 58.72 59.45
+## 3 57.19 59.95 59.34
+dim(simulation)
+
+suppressPackageStartupMessages(library(tidyr))
+simulation <- simulation %>% 
+    gather(key=SampleSize, value=SampleMean)
+head(simulation, 3)
+dim(simulation)
+```
+
+
+<br>
+<br>
+
+### Exercise 10
+
+```{r}
+#density plot by group
+
+```
+
+
+<br>
+<br>
+
+### Exercise 11
+
+```{r}
+sd(house$Age, na.rm=TRUE)/sqrt(16)
+sd(house$Age, na.rm=TRUE)/sqrt(64)
+sd(house$Age, na.rm=TRUE)/sqrt(100)
+## [1] 10.84
+## [1] 10.84
+## [1] 10.84
+```
+
+
+
+
+<br>
+<br>
+
+
+## Regression Models
+
+### Exercise 12
+```{r}
+PopMod <- lm(Age ~ Assumedoffice, data=house)
+
+#obtain just the coefficients from this model
+PopMod$coef
+##   (Intercept) Assumedoffice 
+##     1468.9169       -0.7024
+
+ggplot(house, aes(x=Assumedoffice, y=Age)) + 
+    geom_point() + 
+    geom_smooth(method="lm")
+```
+
+part a:
+```{r}
+#set the seed
+set.seed(20)
+simulation2 <- data.frame(beta0=rep(0,1000), beta1=rep(0,1000))
+
+#initialize the for loop
+for (i in 1:1000){
+  newsamp16 <- sample_n(house, size=100)
+  #dim(newsamp16)
+  SampMod1 <- lm(Age ~ Assumedoffice, data=newsamp16)
+  simulation2$beta0[i] = SampMod1$coef[1]
+  simulation2$beta1[i] = SampMod1$coef[2]
+}
+
+#run the for loop
+
+```
+    
+part b:
+
+```{r}
+#construct a histogram of the 1000 beta0 estimates
+ggplot(simulation2, aes(x=beta0)) + 
+    geom_histogram() 
+    
+#construct a histogram of the 1000 beta1 estimates
+ggplot(simulation2, aes(x=beta1)) + 
+    geom_histogram() 
+
+```
+
+part c:
+```{r}
+#approximate the standard errors
+mod <- lm(mod <- lm(Age ~ Assumedoffice, data=house))
+summary(mod)
+
+summary(simulation2$beta0)
+sd(simulation2$beta0)
+
+summary(simulation2$beta1)
+sd(simulation2$beta1)
+```
+
+
+<br>
+<br>
+
+### Exercise 13
+
+part a:
+```{r}
+#set up the plotting frame and store it as g1
+g1 <- ggplot(house, aes(x=Assumedoffice,y=Age)) + 
+    lims(y=c(40,100), x=c(1970,2016))
+
+for(i in 1:20){
+    #take a sample of 16 members
+    samp <- sample_n(house, size=16)
+
+    #add the sample model line to g1
+    g1 <- g1 + 
+        geom_smooth(data=samp, aes(x=Assumedoffice,y=Age), 
+            method="lm", color="gray", se=FALSE, fullrange=TRUE)
+}
+
+#plot the 20 sample lines with the population line (red)
+g1  + geom_smooth(data=house, aes(x=Assumedoffice,y=Age), 
+    method="lm", color="red", se=FALSE) 
+```
+
+part b:
+```{r}
+#set up the plotting frame and store it as g1
+g1 <- ggplot(house, aes(x=Assumedoffice,y=Age)) + 
+    lims(y=c(40,100), x=c(1970,2016))
+
+for(i in 1:20){
+    #take a sample of 16 members
+    samp <- sample_n(house, size=100)
+
+    #add the sample model line to g1
+    g1 <- g1 + 
+        geom_smooth(data=samp, aes(x=Assumedoffice,y=Age), 
+            method="lm", color="gray", se=FALSE, fullrange=TRUE)
+}
+
+#plot the 20 sample lines with the population line (red)
+g1  + geom_smooth(data=house, aes(x=Assumedoffice,y=Age), 
+    method="lm", color="red", se=FALSE) 
+```
+
+
+    
+    
+
+    
+    
+
+<br>
+<br>
+
+
+## The Central Limit Theorem
+
+### Exercise 14
+
+
+
+<br>
+<br>
+
+
+## Extra: Writing Functions
+
+
+
+
+
+
+<br>
+<br>
+<br>
+
+

@@ -1,0 +1,352 @@
+---
+title: "IMA Day 4 Notes"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+
+
+
+## Getting Started
+
+**Load packages required for exercises:**
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+```
+
+
+## Motivating Example
+```{r}
+mydata <- data.frame(x = c(1:5))
+mydata
+
+sample_n(mydata, size=3)
+sample_n(mydata, size=3, replace=TRUE)
+```
+
+
+### Exercise 1
+
+```{r}
+#Step 1: set up a 2 card deck
+deck <- data.frame(card=c("fire", "no fire"))
+deck
+
+#Step 2: Randomly pick a card from the deck 17 times
+suppressPackageStartupMessages(library(dplyr))
+outcome <- sample_n(deck, size = 17, replace=TRUE)
+
+#Step 3: Check out the results
+table(outcome)
+
+```
+
+<br>
+<br>
+
+### Exercise 2
+
+part a:
+
+```{r}
+#set the seed
+set.seed(2000)
+#initialize the for loop
+Trials <- data.frame(fire = rep(0,500), nofire = rep(0,500))
+#run the for loop
+for(i in 1:500){
+    #randomly pick a card from the deck 17 times
+    outcome <- sample_n(deck, size = 17, replace=TRUE)
+
+    #store the results in Trials
+    Trials[i,] <- table(outcome)
+}
+
+#check out the first 6 experiment results
+head(Trials)
+```
+
+part b:
+
+```{r}
+ggplot(Trials, aes(x=nofire)) + 
+    geom_histogram(color="white")
+```
+
+part c:
+```{r}
+min(Trials$nofire)
+max(Trials$nofire)
+```
+```{r}
+table(Trials$nofire)
+```
+
+
+<br>
+<br>
+
+
+### Exercise 3
+
+a. No. 14/17 is not a typical result
+b. 3/500 = 0.006
+c. Null hypothesis is false. We conclude that P.S has blindsight.
+
+
+        
+<br>
+<br>
+
+### Exercise 4
+What if, instead, P.S. had chosen the non-burning house 10 out of 17 times.
+
+a. Kind of Yes. Selects it
+b. (56+50+ 34+10)/500 = 0.0316
+c. Yes.
+
+<br>
+<br>
+<br>
+<br>
+
+
+
+## Hypothesis Testing for Model Coefficients
+
+```{r}
+ps <- read.csv("https://www.macalester.edu/~ajohns24/data/PetStress.csv")
+head(ps, 3)
+```
+
+### Exercise 5
+b. On average, heart rate increases with age.
+c. Symmetric Bell shaped distribution with mean zero.
+
+
+
+
+
+<br>
+<br>
+
+### Exercise 6
+
+
+part a:
+```{r}
+#plot
+ggplot(ps, aes(x=Age,y=MaxHeartRate)) +
+      geom_point() + 
+      geom_smooth(method="lm")
+
+
+#model
+HeartMod1 <- lm(MaxHeartRate ~ Age, data=ps)
+summary(HeartMod1)
+
+```    
+        
+```{r}
+confint(HeartMod1, level=0.95)
+```
+
+b. We don't have enough evidence to "reject" $H_{0}$ as 0 lies in the CI.
+
+c. 0.3432
+ t-value:how many standard errors away from 0 is $\hat{\beta_{1}}$
+```{r}
+0.2765/0.3432
+```
+It is relatively close to 0 by 68-95-99.7 rule
+<br>
+<br>
+
+### Exercise 7
+a. >0.05
+```{r}
+#Probability that it is more than 0.8* sd away from 0. (two sided)
+1- 0.8*0.68
+
+#one-sided
+(1- 0.8*0.68)/2
+```
+c. It's not unlikely that we'd have observed such a strong increase in heart rate with age if in fact there were no relationship between these variables in the broader population.
+
+d. Don't reject  $H_{0}$ . We don't have enough evidence to conclude that, on average, heart rate increases with age 
+
+<br>
+<br>
+
+
+### Exercise 8
+a
+```{r}
+#plot
+ggplot(ps, aes(y=MaxHeartRate,x=MeanHeartRate)) +
+      geom_point() + 
+      geom_smooth(method="lm")
+
+
+#model
+HeartMod2 <- lm(MaxHeartRate ~ MeanHeartRate, data=ps)
+summary(HeartMod2)
+```
+b.
+```{r}
+confint(HeartMod2, level=0.95)
+```
+
+$\hat{\beta_{1}}$ : Estimate = 1.6613, SE= 0.1062
+
+c. The esitmate \hat{\beta_{1}} is t-value (15.642) times SE away from 0. This means if the null hypothesis were true, this would be quite unlikely (w.r.t the significance level $\alpha = 0.05$).
+
+d. p-value 
+
+```{r}
+#one-sided
+(1- 15.642*0.68)/2
+```
+
+The probability that this data is not as extreme if our null hypothesis is true is p-value < 2.2e-16
+
+e. Thus, we reject the null hypothesis that there is no co-relation between person's maximum heart rate to their mean heart rate.
+
+<br>
+<br>
+
+
+### Exercise 9
+
+```{r}
+#plot
+ggplot(ps, aes(y=MaxHeartRate,x=MeanHeartRate, color = Condition)) +
+      geom_point() + 
+      geom_smooth(method="lm")
+#model
+HeartMod3 <- lm(MaxHeartRate ~ MeanHeartRate + Condition , data=ps)
+summary(HeartMod3)
+```
+
+```{r}
+confint(HeartMod3, level=0.95)
+```
+b. $\hat{\beta_{0}}$: MaxHeartBeat of a person when their MeanHeartRate = 0 and subject is in controlled environment.
+$\hat{\beta_{1}}$: Change in MaxHeartBeat when MeanHeartBeat change by $\hat{\beta_{1}}$ in controlled environment.
+
+$\hat{\beta_{2}}$ The amount by which MaxHeartBeat differs from when they are in controlled environment of a person when their MeanHeartRate = 0 and they are with a friend
+
+$\hat{\beta_{3}}$ The amount by which MaxHeartBeat differs from when they are in controlled environment of a person when their MeanHeartRate = 0 and they are with a pet
+
+c. While Controlling for the Condition parameter, is MeanHeartRate and MAxHeartRate associated with each other significantly
+
+The esitmate \hat{\beta_{1}} is t-value (15.642) times SE away from 0 while contolling for the Condition parameter. 
+
+p-value < 2e-16
+
+Controlling for the Condition Paramter, we have significant evidence to reject the null hypothesis i.e we reject the hypothesis that there is no co-relation between MeanHeartRate and MaxHeartRate.
+
+d.ConditionF
+Null hypothesis would state there is difference in MaxHeartRate for same MeanHeartRate as you change environment from controlled to Friend present.
+
+The estimate \hat{\beta_{2}} is t-value (-0.160) times SE away from 0 when meanheartrate is same as you change environment from controlled to Friend present.
+
+p-value = 0.873/2  - Probability that  assuming $H_{0}$. 
+
+Not enough evidence to reject the null hypothesis
+
+e. Reject Null Hypothesis
+
+
+<br>
+<br>
+
+### Exercise 10
+```{r}
+interactionMod <- lm(MaxHeartRate ~ MeanHeartRate*Condition, ps)
+summary(interactionMod)
+```
+
+```{r}
+confint(interactionMod, level=0.95)
+```
+MeanHeartRate:ConditionF - Not significant - Don't reject Null Hypothesis
+MeanHeartRate:Conditionp - Significant - Reject Null Hypothesis
+
+<br>
+<br>
+<br>
+<br>
+
+
+## Potential Errors in Hypothesis Testing
+
+### Exercise 11
+
+```{r}
+dd <- c(0.01, 0.03, 0.59, 0.02, 0.55, 0.09, 1.36, 0.61, 0.18, 0.06)
+mean(dd)
+```
+```{r}
+curve(dnorm(x, mean=0.2, sd=0.05))
+```
+
+```{r}
+pnorm(0.35, mean=0.2, sd=0.05, lower=FALSE)
+```
+c. Reject  $H_{0}$ . We have statistically significant evidence that the driver is not sober.
+<br>
+<br>
+
+### Exercise 12
+a. Type 1 error: Conclude that a sober driver is drunk.
+b. Type II Error: Drunk driver is sober
+
+
+<br>
+<br>
+
+### Exercise 13
+
+
+```{r}
+qnorm(0.95, mean=0.2, sd=0.05)
+```
+
+```{r}
+sober <- rnorm(1000, mean=0.2, sd=0.05)
+sum(sober> 0.2822)/10
+```
+
+<br>
+<br>
+
+### Exercise 14
+
+```{r}
+BAC8 <- rnorm(1000, mean=(0.2+ 4*0.08), sd=(0.05+0.08)**2)
+```
+
+```{r}
+sum(BAC8 < 0.2822)/10
+```
+
+```{r}
+BAC15 <- rnorm(1000, mean=(0.2+ 4*0.15), sd=(0.05+0.15)**2)
+```
+
+```{r}
+sum(BAC15 <= 0.2822)/10
+```
+<br>
+<br>
+
+### Exercise 15
+
+
+

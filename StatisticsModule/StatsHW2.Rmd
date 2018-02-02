@@ -1,0 +1,451 @@
+---
+title: "Homework 2: Measuring Model Quality"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+
+**Load some handy packages:**
+
+```{r, warning=FALSE}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+```
+
+
+<br>
+<br>
+
+
+
+# Review + Residual Analysis
+
+
+```{r}
+#load the fivethirtyeight library
+suppressPackageStartupMessages(library(fivethirtyeight))
+
+#load data
+data(hate_crimes)
+```
+
+
+<br>
+<br>
+
+## Exercise 1
+```{r}
+hate_crimes1 <- hate_crimes %>% mutate(postHate = hate_crimes_per_100k_splc/10, preHate = avg_hatecrimes_per_100k_fbi/365) %>% mutate(trump50 = (share_vote_trump > 0.5)) %>% mutate(changeHate = postHate - preHate)
+```
+
+
+
+
+
+
+<br>
+<br>
+
+## Exercise 2
+```{r}
+hate_crimes1 %>% ggplot(aes(postHate)) + geom_histogram()
+```
+
+
+```{r}
+hate_crimes1 %>% filter(postHate > 0.12)
+```
+This could be because of the number of protests that were organised in the DC area after the presidential election. 
+
+```{r}
+hate_sub <- hate_crimes1 %>% filter(postHate< 0.12, )
+dim(hate_sub)
+mean(hate_sub$postHate, na.rm=TRUE)
+```
+
+```{r}
+ggplot(hate_crimes1, aes(x=share_non_white, y=postHate)) + 
+    geom_point() + 
+    geom_smooth(method="lm",se=FALSE) + 
+    geom_smooth(data=hate_sub, aes(x=share_non_white, y=postHate, color="red"), method="lm", se=FALSE)
+```
+
+
+<br>
+<br>
+
+## Exercise 3
+```{r}
+mod1 <- lm(postHate ~ preHate*trump50, hate_sub)
+summary(mod1)
+```
+
+```{r}
+hate_sub %>% ggplot(aes(y = postHate, x = preHate, color = trump50)) + geom_point() + geom_smooth(method = 'lm', se = FALSE) + geom_abline(intercept = 0, slope  = 1)
+```
+
+Line with slope 1 and intercept zero represent states where hate crime didn't change after the election. It is a reference. Points above this line represent states where hate crime increased after election and points below this line represent states where hate crime decreased after the election. 
+
+We would expect postHate to correlated preHate (depending on hate crimes in each state) and we want to see how hate crime changed where Trump won. It could have influenced the hate crime rate. 
+
+3c. postHate =  0.014970 +  2.864926 preHate + -0.001260 trump50TRUE + -1.556091 (preHate* trump50TRUE)
+
+3d. preHate* trump50TRUE = it quantifies how trump's win in a state affected the change in postHate crime in that state
+
+
+
+
+<br>
+<br>
+
+## Exercise 4
+Assumption1 : Residuals are normally distributed
+```{r}
+mod1Results <- data.frame(observed = hate_sub$postHate, predicted = mod1$fitted.values, residual = mod1$residuals)
+
+```
+
+
+```{r}
+ggplot(mod1Results, aes(y=residual, x=predicted)) + 
+    geom_point() + 
+    geom_hline(yintercept=0)
+
+```
+
+```{r}
+ggplot(mod1Results, aes(sample=residual)) + 
+    geom_qq()
+```
+
+
+<br>
+<br>
+<br>
+<br>
+
+
+
+
+# $R^2$
+```{r}
+ggplot(hate_sub, aes(x=changeHate)) + 
+    geom_histogram(color="white")
+```
+
+
+<br>
+<br>
+
+## Exercise 5
+```{r}
+library(mosaic)
+mod20 <-  lm(changeHate ~ share_non_white, hate_sub)
+rsquared(mod20)
+
+mod21 <-  lm(changeHate ~ median_house_inc, hate_sub)
+rsquared(mod21)
+
+mod22 <-  lm(changeHate ~ share_non_white + median_house_inc, hate_sub)
+rsquared(mod22)
+
+mod23 <-  lm(changeHate ~ share_vote_trump, hate_sub)
+rsquared(mod23)
+
+mod24 <- lm(changeHate ~ trump50, hate_sub)
+rsquared(mod24)
+
+mod25 <- lm(changeHate ~ share_vote_trump + trump50, hate_sub)
+rsquared(mod25)
+```
+
+
+model   structure                                           $R^2$
+------- --------------------------------------------------- ----------
+1       `changeHate ~ share_non_white`                      0.061607
+2       `changeHate ~ median_house_inc`                     0.069333
+3       `changeHate ~ share_non_white + median_house_inc`   0.12333
+4       `changeHate ~ share_vote_trump`                     0.1644
+5       `changeHate ~ trump50`                              0.1370
+6       `changeHate ~ share_vote_trump + trump50`           0.16752
+
+<br>
+<br>
+
+
+
+## Exercise 6
+
+6a. $R^2$ doesn't change or increases. Never decreases.
+6b. Notice that the model 3  R2R2  is nearly the sum of the  R2R2  from models 1 & 2. - Because the predictors are not correlated
+However, the model 6  R2R2  is very similar to that of models 4 & 5 even though it contains the predictors from both. - Because trump50 is dependent on share_vote_trump. So, adding this redundant predictor doesn't increase the $R^2$
+
+```{r}
+hate_sub %>% ggplot(aes(y = median_house_inc, x = share_non_white)) + geom_point()
+
+```
+```{r}
+hate_sub %>% ggplot(aes(y = share_vote_trump, x = trump50)) + geom_point()
+```
+
+<br>
+<br>
+
+## Exercise 7
+
+It is not worth adding many predictors to increase $R^2$ as it plateaus afterIncreasing number of predictors increases $R^2$ at the cost of adding complexity to the model. Visualizations and interpretation become complex. It won't be easy to explain. 
+
+
+
+
+
+<br>
+<br>
+<br>
+<br>
+
+
+# Cross Validation
+
+
+```{r}
+#Load the data:
+suppressPackageStartupMessages(library(DAAG))
+data(socsupport)
+
+#get the codebook
+?socsupport
+```
+
+```{r}
+BDImod <- lm(BDI ~ psisat, data=socsupport)
+summary(BDImod)
+
+ggplot(socsupport, aes(x=psisat, y=BDI)) + 
+    geom_point() + 
+    geom_smooth(method="lm")
+```
+
+```{r}
+mean(BDImod$residuals^2)
+## [1] 71.85
+sqrt(mean(BDImod$residuals^2))
+## [1] 8.476
+dim(socsupport)
+```
+
+
+
+<br>
+<br>
+
+## Exercise 8
+```{r}
+data_train <- socsupport[-1,]
+data_test <- socsupport[1,]
+
+train_mod <- lm(BDI ~ psisat, data = data_train)
+
+train_pred <- makeFun(train_mod)
+test_predictions <- train_pred(psisat = data_test$psisat)
+mean((test_predictions - data_test$BDI)^2)
+```
+
+```{r}
+MSEi = rep(0, nrow(socsupport))
+
+
+for(i in 1: nrow(socsupport)){
+  
+data_train <- socsupport[-i,]
+data_test <- socsupport[i,]
+
+train_mod <- lm(BDI ~ psisat, data = data_train)
+train_pred <- makeFun(train_mod)
+test_predictions <- train_pred(psisat = data_test$psisat)
+MSEi[i] <- mean((test_predictions - data_test$BDI)^2) 
+
+}
+
+MSEdata <- data.frame(MSEi)
+
+MSEdata %>% ggplot(aes(MSEi)) + geom_density()
+
+cv <- mean(MSEi)
+cv
+mean(BDImod$residuals^2)
+
+```
+
+
+
+<br>
+<br>
+
+## Exercise 9
+
+```{r}
+suppressPackageStartupMessages(library(boot))
+
+#fit the model using the glm() not lm() function
+mod <- glm(BDI ~ psisat, data=socsupport, family="gaussian")
+
+#perform n-fold cross validation using cv.glm()
+cv.err <- cv.glm(socsupport, mod, K=95)
+
+#report the CV error (value on the left)
+cv.err$delta
+```
+
+
+
+
+<br>
+<br>
+
+## Exercise 10
+
+
+```{r}
+set.seed(50)
+
+cv10.err <- cv.glm(socsupport, mod, K=10)
+cv10.err$delta
+
+cv2.err <- cv.glm(socsupport, mod, K=2)
+cv2.err$delta
+```
+
+
+
+10d. 2-fold CV
+<br>
+<br>
+<br>
+<br>
+
+
+
+
+# Overfitting
+
+
+<br>
+
+## Exercise 11
+
+```{r}
+mod <- lm(changeHate ~ median_house_inc, data=hate_sub)
+summary(mod)
+
+ggplot(hate_sub, aes(x=median_house_inc, y=changeHate)) + 
+    geom_point() + 
+    geom_smooth(method="lm")
+```
+```{r}
+mod <- glm(changeHate ~ median_house_inc, data=hate_sub, family="gaussian")
+set.seed(2000)
+cv10.err <- cv.glm(hate_sub, mod, K=10)
+cv10.err$delta
+```
+
+```{r}
+polymod <- lm(changeHate ~ poly(median_house_inc, degree=3), hate_sub)
+rsquared(polymod)
+```
+
+```{r}
+mod <- glm(changeHate ~ poly(median_house_inc, degree=3), data=hate_sub, family="gaussian")
+set.seed(2000)
+cv10.err <- cv.glm(hate_sub, mod, K=10)
+cv10.err$delta
+```
+
+
+```{r}
+#for each state's median_house_inc, store the model predicted changeHate
+polymodresults <- data.frame(median_house_inc=hate_sub$median_house_inc, prediction=polymod$fitted.values)
+
+#order the cases by median_house_inc
+polymodresults <- arrange(polymodresults, median_house_inc)
+
+#plot model and cases
+ggplot(hate_sub, aes(x=median_house_inc, y=changeHate)) + 
+    geom_point() + 
+    geom_smooth(data=polymodresults, aes(x=median_house_inc, y=prediction), stat="identity")
+```
+
+<br>
+<br>
+
+## Exercise 12
+```{r}
+polymod2 <- lm(changeHate ~ poly(median_house_inc, degree=16), hate_sub)
+rsquared(polymod2)
+```
+```{r}
+mod <- glm(changeHate ~ poly(median_house_inc, degree=16), data=hate_sub, family="gaussian")
+set.seed(2000)
+cv10.err <- cv.glm(hate_sub, mod, K=10)
+cv10.err$delta
+```
+```{r}
+#for each state's median_house_inc, store the model predicted changeHate
+polymodresults2 <- data.frame(median_house_inc=hate_sub$median_house_inc, prediction=polymod2$fitted.values)
+
+#order the cases by median_house_inc
+polymodresults2 <- arrange(polymodresults2, median_house_inc)
+
+#plot model and cases
+ggplot(hate_sub, aes(x=median_house_inc, y=changeHate)) + 
+    geom_point() + 
+    geom_smooth(data=polymodresults2, aes(x=median_house_inc, y=prediction), stat="identity")
+```
+
+<br>
+<br>
+
+## Exercise 13
+
+Model               $R^2$           CV error
+------------------- --------------- -----------------
+1st order poly      0.06938         0.0002781563
+3rd order poly      0.1011816       0.0003094298 
+16th order poly     0.2920513       246272.2
+
+
+a and b. Because of overfitting our model is not generic enough for test data. It explains the variability of the training set but not test set as it makes predictions which have large residual error.
+
+
+
+<br>
+<br>
+
+## Exercise 14
+```{r}
+mod14 <- lm(changeHate ~ share_pop_hs + share_vote_trump + median_house_inc + share_non_white + gini_index, data=hate_crimes1)
+summary(mod14)
+```
+```{r}
+ggplot(hate_crimes1, aes(x = gini_index, y = preHate)) +
+geom_smooth(method ='lm', color = 'green') + geom_smooth(data = hate_crimes1,aes(x = gini_index, y = postHate), method = 'lm', color= 'blue') + geom_smooth(data = hate_crimes1,aes(x = gini_index, y = changeHate), method = 'lm', color= 'black')
+```
+
+
+```{r}
+suppressPackageStartupMessages(library(devtools))
+install_github("dtkaplan/statPREPpackage")
+```
+
+```{r}
+suppressPackageStartupMessages(library(statPREP))
+data(Scorecard_small)
+```
+
+```{r}
+Scorecard_small %>% filter(control == 0) %>% ggplot(aes(y = net_tuit_fte, x= adm_rate )) + geom_point()
+```
+

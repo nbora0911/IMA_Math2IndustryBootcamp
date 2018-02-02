@@ -1,0 +1,19 @@
+---
+title: "TestRMarkdown"
+author: "NehaBora"
+date: "June 10, 2017"
+output: html_document
+---
+
+###Excercise 1
+
+*Do* **some calculations** Simple text. 
+```{r}
+2+3
+rep(3,2)
+sqrt(9)
+```
+
+### Excercise 2
+
+Looked at data.
